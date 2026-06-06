@@ -1,8 +1,9 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
+using System.Reflection;
 using System.Windows.Forms;
-using System.Diagnostics;
 
 class InstallerForm : Form {
     private Button btnInstall;
@@ -18,6 +19,7 @@ class InstallerForm : Form {
         this.BackColor = Color.White;
         
         try {
+            // Using default icon if resources don't load
             this.Icon = new Icon(@"resources\icon.ico");
         } catch {}
 
@@ -48,22 +50,41 @@ class InstallerForm : Form {
     private void BtnInstall_Click(object sender, EventArgs e) {
         btnInstall.Enabled = false;
         btnInstall.Text = "Installing...";
+        Application.DoEvents();
 
-        string zipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "installer.zip");
         string extractPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "PassVault");
         
-        if (File.Exists(zipPath)) {
-            Process p = new Process();
-            p.StartInfo.FileName = "powershell.exe";
-            p.StartInfo.Arguments = string.Format("-NoProfile -Command \"Expand-Archive -Path '{0}' -DestinationPath '{1}' -Force\"", zipPath, extractPath);
-            p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            p.Start();
-            p.WaitForExit();
-            
-            MessageBox.Show("PassVault has been successfully installed to your Desktop!", "Installation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        try {
+            if (!Directory.Exists(extractPath)) {
+                Directory.CreateDirectory(extractPath);
+            }
+
+            // Read the embedded zip from resources
+            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("passvault_installer.zip")) {
+                if (stream == null) {
+                    MessageBox.Show("Error: The embedded package 'passvault_installer.zip' was not found inside the executable.", "Extraction Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    btnInstall.Enabled = true;
+                    btnInstall.Text = "Install";
+                    return;
+                }
+                
+                using (ZipArchive archive = new ZipArchive(stream)) {
+                    foreach (ZipArchiveEntry entry in archive.Entries) {
+                        string fullPath = Path.Combine(extractPath, entry.FullName);
+                        if (string.IsNullOrEmpty(entry.Name)) {
+                            Directory.CreateDirectory(fullPath);
+                        } else {
+                            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+                            entry.ExtractToFile(fullPath, true);
+                        }
+                    }
+                }
+            }
+
+            MessageBox.Show("PassVault has been successfully installed!\n\nYou can find the 'PassVault' folder on your Desktop.", "Installation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             this.Close();
-        } else {
-            MessageBox.Show("Error: installer.zip not found in the current folder.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        } catch (Exception ex) {
+            MessageBox.Show("Installation failed:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             btnInstall.Enabled = true;
             btnInstall.Text = "Install";
         }
