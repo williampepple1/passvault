@@ -4,6 +4,8 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QMessageBox>
+#include <QApplication>
+#include <QClipboard>
 
 SetupWindow::SetupWindow(VaultManager* vault, QWidget *parent)
     : QDialog(parent), m_vault(vault)
@@ -73,14 +75,39 @@ void SetupWindow::onCreateClicked() {
 }
 
 void SetupWindow::showRecoveryKey(const QString& recoveryKey) {
-    QMessageBox msgBox(this);
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setWindowTitle("Save Your Recovery Key!");
-    msgBox.setText("Your vault has been created. A recovery key has been generated.\n\n"
-                   "If you forget your master password, you can use this key to unlock your vault.\n\n"
-                   "<b>" + recoveryKey + "</b>\n\n"
-                   "Please save this key in a safe place. It will not be shown again.");
-    msgBox.exec();
+    QDialog dialog(this);
+    dialog.setWindowTitle("Save Your Recovery Key!");
+    dialog.setFixedSize(450, 200);
+
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    
+    QLabel* infoLabel = new QLabel("Your vault has been created. A recovery key has been generated.\n\n"
+                                   "If you forget your master password, you can use this key to unlock your vault.\n"
+                                   "Please save this key in a safe place. It will not be shown again.");
+    infoLabel->setWordWrap(true);
+    layout->addWidget(infoLabel);
+
+    QHBoxLayout* keyLayout = new QHBoxLayout();
+    QLineEdit* keyEdit = new QLineEdit(recoveryKey);
+    keyEdit->setReadOnly(true);
+    keyLayout->addWidget(keyEdit);
+
+    QPushButton* copyBtn = new QPushButton("Copy");
+    keyLayout->addWidget(copyBtn);
+    layout->addLayout(keyLayout);
+
+    connect(copyBtn, &QPushButton::clicked, [&keyEdit]() {
+        QApplication::clipboard()->setText(keyEdit->text());
+        QMessageBox::information(keyEdit->window(), "Copied", "Recovery key copied to clipboard!");
+    });
+
+    QPushButton* okBtn = new QPushButton("I have saved it");
+    layout->addStretch();
+    layout->addWidget(okBtn, 0, Qt::AlignRight);
+
+    connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
 
     accept();
     emit setupComplete();
