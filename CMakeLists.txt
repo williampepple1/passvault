@@ -29,6 +29,7 @@ set(PROJECT_SOURCES
     src/EntryDialog.cpp
     src/EntryDialog.h
     resources/resources.qrc
+    app_icon.rc
 )
 
 add_executable(PassVault

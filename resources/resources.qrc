@@ -2,5 +2,6 @@
 <qresource>
     <file>themes/dark.qss</file>
     <file>themes/light.qss</file>
+    <file>icon.png</file>
 </qresource>
 </RCC>

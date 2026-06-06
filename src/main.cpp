@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QIcon>
 #include "VaultManager.h"
 #include "SetupWindow.h"
 #include "LoginWindow.h"
@@ -6,6 +7,7 @@
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
+    app.setWindowIcon(QIcon(":/icon.png"));
 
     VaultManager vault("vault.dat");
 
